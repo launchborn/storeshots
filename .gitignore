@@ -1,0 +1,17 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+.Python
+*.egg-info/
+
+# Tool output (generated screenshots)
+out/
+appstore/
+output/
+
+# OS / editor cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/

@@ -1,0 +1,27 @@
+{
+  "frame": "auto",
+  "frame_color": "black",
+  "src_dir": ".",
+  "output_dir": "appstore",
+  "canvas": { "width": 1320, "height": 2868 },
+  "background": { "type": "gradient", "top": [22, 25, 32], "bottom": [6, 7, 9] },
+  "accent": [58, 209, 122],
+  "accent_width": 110,
+  "font": null,
+  "caption": { "font_size": 82, "line_height": 104, "top": 180, "color": [255, 255, 255] },
+  "margins": { "side": 60, "bottom": 70, "gap_after_caption": 90 },
+  "screenshots": [
+    {
+      "src": "IMG_0001.png",
+      "caption": "Real apartments in\nHurghada and across Egypt",
+      "out": "01_hero.png"
+    },
+    {
+      "src": "IMG_0002.png",
+      "caption": "Filter by what\nmatters to you",
+      "out": "02_filters.png",
+      "crop_top": 0,
+      "patches": []
+    }
+  ]
+}
