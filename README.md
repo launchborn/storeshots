@@ -40,8 +40,8 @@ git clone https://github.com/launchborn/storeshots.git ~/.claude/skills/storesho
 ## Usage
 
 Run the **`/storeshots`** command (or just ask in plain language, e.g. *"make
-App Store screenshots from these captures"* / *"сделай моки для стора"*). Claude
-reads `SKILL.md` and runs a short interview — you never touch a config file:
+App Store screenshots from these captures"*). Claude reads `SKILL.md` and runs a
+short interview — you never touch a config file:
 
 1. **Path** — give a folder of screenshots or a single screenshot file. It must
    be a real file on disk (a pasted-in-chat image isn't enough — drag the file
