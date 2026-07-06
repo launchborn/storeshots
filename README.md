@@ -15,6 +15,10 @@ skill** and works standalone from the command line.
   (default 1320×2868, 6.9"), regardless of the source device.
 - **One JSON config** — map each screenshot to a caption; tweak frame color,
   background, accent, margins, and per-image crops/patches.
+- **Two modes** — `poster` (framed phone + caption on a styled background, a
+  store-listing image) or `bare` (just the device frame with the screenshot
+  inside, on a **transparent** background, tightly cropped — a drop-in overlay
+  PNG).
 
 ## Example
 
@@ -32,8 +36,12 @@ Raw screenshot → framed store shot:
 git clone https://github.com/launchborn/storeshots.git ~/.claude/skills/storeshots
 ```
 
-Then just ask Claude Code: *"make App Store screenshots from these captures"* —
-it reads `SKILL.md` and drives the rest.
+Then just ask Claude Code: *"make App Store screenshots from these captures"*
+(or run the `/storeshots` command) — it reads `SKILL.md` and drives the rest as
+a short interview: it asks for the **path** to your screenshot(s), proposes
+**three caption** options (or take your own), **three background** styles (or
+your own colors), and whether to save **beside the sources** (as `mockup_*.png`)
+or into an **`appstore/` subfolder**.
 
 ### Standalone
 
@@ -53,7 +61,9 @@ cd storeshots
 ./venv/bin/python3 compose.py --config path/to/your-config.json
 ```
 
-Outputs land in the config's `output_dir`.
+Outputs land in the config's `output_dir` — or, if you omit it, **right beside
+the sources** in `src_dir`, each name prefixed with `out_prefix` (default
+`mockup_`).
 
 ### Minimal config
 
@@ -62,7 +72,8 @@ Outputs land in the config's `output_dir`.
   "frame": "auto",
   "frame_color": "black",
   "src_dir": ".",
-  "output_dir": "out",
+  "output_dir": ".",
+  "out_prefix": "mockup_",
   "canvas": { "width": 1320, "height": 2868 },
   "background": { "type": "gradient", "top": [22, 25, 32], "bottom": [6, 7, 9] },
   "accent": [58, 209, 122],
@@ -81,9 +92,12 @@ See [`config.example.json`](config.example.json) for the full field list, and
 
 | Field | Meaning |
 | --- | --- |
+| `mode` | `"poster"` (default: framed phone + caption on a styled background) or `"bare"` (device frame + screenshot only, transparent background, tight crop, no caption/margins). Per-screenshot override allowed. |
 | `frame` | `"auto"` (match by aspect) or a slug from `frames/` / a PNG path. Per-screenshot override allowed. |
 | `frame_color` | Bias `"auto"` ties toward a finish (`"black"`, `"natural"`, `"deep-blue"`, …). |
-| `src_dir` / `output_dir` | Resolved relative to the config file. |
+| `src_dir` | Folder with the raw screenshots, relative to the config file. |
+| `output_dir` | Where mockups are written, relative to the config file. Omit to save beside the sources (falls back to `src_dir`); set `"appstore"` for a subfolder. |
+| `out_prefix` | Prepended to each output filename (default `"mockup_"`); `""` disables. |
 | `canvas` | Final image size. Use 1320×2868 (6.9") or 1290×2796. |
 | `background` | `{"type":"gradient","top":[r,g,b],"bottom":[r,g,b]}` or `{"type":"solid","color":[r,g,b]}`. |
 | `accent` | `[r,g,b]` underline under the caption (omit to skip). Set to your brand color. |

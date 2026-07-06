@@ -17,7 +17,7 @@ import os
 import sys
 
 try:
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
 except ImportError:
     sys.exit("Pillow is required: pip install Pillow numpy")
 
@@ -169,20 +169,27 @@ def build_framed_phone(frame, mask, bbox, shot, crop_top, patches):
 
     bx0, by0, bx1, by1 = bbox
     target_w, target_h = bx1 - bx0, by1 - by0
-    # Scale-to-COVER the cutout: the screenshot always fills the whole screen
-    # hole with no background gap, even when its aspect ratio differs from the
-    # frame's (e.g. a 15 Pro screenshot in a 16 Pro Max frame). Overflow is
-    # clipped by the mask. Center horizontally, top-align vertically so the
-    # status bar / Dynamic Island line up at the top.
-    scale = max(target_w / shot.width, target_h / shot.height)
+    # Scale-to-COVER the cutout, plus a few px of BLEED on every side, so the
+    # screenshot always fills the whole screen hole AND tucks under the frame's
+    # antialiased inner edge. Without the bleed, the styled background shows
+    # through that semi-transparent ring as a halo around the screen / Dynamic
+    # Island. Overflow is clipped by the mask (grown to match the bleed). Center
+    # horizontally, top-align vertically so the status bar / Dynamic Island line
+    # up at the top; the upward bleed keeps the top edge covered too.
+    bleed = 6
+    scale = max((target_w + 2 * bleed) / shot.width,
+                (target_h + 2 * bleed) / shot.height)
     new_w = max(1, round(shot.width * scale))
     new_h = max(1, round(shot.height * scale))
     resized = shot.resize((new_w, new_h), Image.LANCZOS)
 
     screen_layer = Image.new("RGBA", frame.size, (0, 0, 0, 0))
-    paste_x = bx0 + (target_w - new_w) // 2
-    screen_layer.paste(resized, (paste_x, by0))
-    screen_layer.putalpha(mask)
+    paste_x = bx0 + (target_w - new_w) // 2   # centered → overflows both sides
+    paste_y = by0 - bleed                      # top-aligned, with an upward bleed
+    screen_layer.paste(resized, (paste_x, paste_y))
+    # Grow the cutout mask a touch so it reaches into (and under) the frame's
+    # antialiased edge — the bleed above guarantees screenshot pixels there.
+    screen_layer.putalpha(mask.filter(ImageFilter.MaxFilter(7)))
 
     out = Image.new("RGBA", frame.size, (0, 0, 0, 0))
     out.alpha_composite(screen_layer)
@@ -200,7 +207,12 @@ def main():
 
     conf_dir = os.path.dirname(os.path.abspath(args.config))
     src_dir = os.path.join(conf_dir, cfg.get("src_dir", "."))
-    out_dir = os.path.join(conf_dir, cfg.get("output_dir", "appstore"))
+    # By default write the finished mockups back into the SAME folder as the raw
+    # screenshots (output_dir falls back to src_dir), distinguished only by the
+    # "out_prefix" prepended to each output filename (default "mockup_"). Set
+    # output_dir explicitly (e.g. "appstore") to collect them in a subfolder.
+    out_dir = os.path.join(conf_dir, cfg.get("output_dir", cfg.get("src_dir", ".")))
+    out_prefix = cfg.get("out_prefix", "mockup_")
     os.makedirs(out_dir, exist_ok=True)
 
     # frame: "auto" (default) picks the best-matching bundled frame per
@@ -208,6 +220,13 @@ def main():
     # "frame" overrides. Optional "frame_color" biases auto ties (e.g. "black").
     default_frame = cfg.get("frame", "auto")
     color_pref = cfg.get("frame_color")
+
+    # mode: "poster" (default) = framed phone on a styled background with a
+    # caption + accent underline and margins (a store-listing image). "bare" =
+    # just the device frame with the screenshot inside, on a TRANSPARENT
+    # background, tightly cropped to the device with no caption and no side
+    # margins — a drop-in PNG to overlay anywhere. Per-item "mode" overrides.
+    default_mode = cfg.get("mode", "poster")
 
     # Canvas defaults to a 6.9" App Store size, independent of source device.
     canvas_cfg = cfg.get("canvas", {})
@@ -238,32 +257,43 @@ def main():
             item.get("crop_top", 0), item.get("patches", []),
         )
 
-        canvas = make_background((canvas_w, canvas_h), bg)
-        cap_bottom = draw_caption(canvas, item.get("caption", ""), cap_cfg, canvas_w)
-
-        if cap_bottom is not None and accent:
-            uy = cap_bottom + 26
-            uw = cfg.get("accent_width", 110)
-            ImageDraw.Draw(canvas).rounded_rectangle(
-                [(canvas_w - uw) // 2, uy, (canvas_w + uw) // 2, uy + 8],
-                radius=4, fill=tuple(accent),
-            )
-            top_margin = uy + gap
+        mode = item.get("mode", default_mode)
+        if mode == "bare":
+            # Just the device: tight-crop to the phone silhouette and keep the
+            # RGBA alpha so everything around the frame stays transparent. No
+            # background, caption, accent, or side margins.
+            out_img = framed.crop(framed.getbbox())
         else:
-            top_margin = (cap_bottom or cap_cfg.get("top", 180)) + gap
+            canvas = make_background((canvas_w, canvas_h), bg)
+            cap_bottom = draw_caption(canvas, item.get("caption", ""), cap_cfg, canvas_w)
 
-        avail_w = canvas_w - 2 * side_m
-        avail_h = canvas_h - top_margin - bottom_m
-        s = min(avail_w / framed.width, avail_h / framed.height)
-        fw, fh = int(framed.width * s), int(framed.height * s)
-        framed_r = framed.resize((fw, fh), Image.LANCZOS)
+            if cap_bottom is not None and accent:
+                uy = cap_bottom + 26
+                uw = cfg.get("accent_width", 110)
+                ImageDraw.Draw(canvas).rounded_rectangle(
+                    [(canvas_w - uw) // 2, uy, (canvas_w + uw) // 2, uy + 8],
+                    radius=4, fill=tuple(accent),
+                )
+                top_margin = uy + gap
+            else:
+                top_margin = (cap_bottom or cap_cfg.get("top", 180)) + gap
 
-        px = (canvas_w - fw) // 2
-        py = top_margin + (avail_h - fh) // 2
-        canvas.alpha_composite(framed_r, (px, py))
+            avail_w = canvas_w - 2 * side_m
+            avail_h = canvas_h - top_margin - bottom_m
+            s = min(avail_w / framed.width, avail_h / framed.height)
+            fw, fh = int(framed.width * s), int(framed.height * s)
+            framed_r = framed.resize((fw, fh), Image.LANCZOS)
 
-        out_path = os.path.join(out_dir, item["out"])
-        canvas.convert("RGB").save(out_path, "PNG")
+            px = (canvas_w - fw) // 2
+            py = top_margin + (avail_h - fh) // 2
+            canvas.alpha_composite(framed_r, (px, py))
+            out_img = canvas.convert("RGB")  # flatten onto the opaque background
+
+        out_name = item["out"]
+        if out_prefix and not out_name.startswith(out_prefix):
+            out_name = out_prefix + out_name
+        out_path = os.path.normpath(os.path.join(out_dir, out_name))
+        out_img.save(out_path, "PNG")
         print("Wrote", out_path)
 
 

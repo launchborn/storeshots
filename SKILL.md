@@ -23,40 +23,96 @@ installed as a Claude skill that's typically `~/.claude/skills/storeshots`.
 
 ## How to use
 
-1. **Collect the raw screenshots** the user captured (any folder). The frame is
-   auto-picked per screenshot by aspect ratio, and the shot is scaled to cover
-   the frame's screen cutout — so any iPhone source works.
+Drive the skill as a short **interactive interview** with `AskUserQuestion` —
+don't silently guess the inputs. Collect the inputs below, then render.
 
-2. **Set up the Python env** (once — kept inside the skill dir, gitignored):
+1. **Path to the screenshots** — ask for either a **folder** of raw screenshots
+   or a path to **one specific screenshot file**. It must be a real file on disk:
+   a pasted-in-chat image is not enough, so if the user only pasted one, ask them
+   to drag the file in or give its path. Paths are free-form (ask in plain text,
+   or via a question's custom-answer field). **Get this first** — you need to see
+   the actual screenshot before proposing captions and backgrounds. When the path
+   is a folder, ignore any files already starting with the `out_prefix` (default
+   `mockup_`) — those are previous outputs, not new sources.
+
+2. **Open the screenshot(s)** and look at what each screen does — this informs
+   the next two questions.
+
+3. **Ask output mode first**, then the mode-specific questions — batch what you
+   can into one `AskUserQuestion` call (offer a custom answer on each):
+
+   - **Mode** — two choices:
+     - **Poster** (default) — framed phone on a styled background with a caption
+       and accent underline. The store-listing image.
+     - **Bare frame** — just the device frame with the screenshot inside, on a
+       **transparent** background, tightly cropped with no caption and no side
+       margins. A drop-in PNG to overlay anywhere. In this mode **skip the
+       caption and background questions** — they don't apply.
+   - **Caption** *(poster only)* — propose **three options** phrased as user
+     *benefits*, not UI labels ("Rentals right next to you", not "Nearby
+     screen"). Keep them honest: only claim what the app actually does (verify
+     against the codebase if unsure). The user can also type their own.
+   - **Background style** *(poster only)* — propose **three** styles that suit
+     the shot, e.g. a brand-color gradient sampled from the app, a dark
+     gradient, and a light neutral gradient. Plus a custom option (user gives
+     colors / HEX).
+   - **Where to save** *(both modes)* — two choices: **the same folder as the
+     screenshots** (default — files get the `mockup_` prefix) or an
+     **`appstore/` subfolder**.
+
+4. **Set up the Python env** (once — kept inside the skill dir, gitignored):
 
    ```bash
    python3 -m venv "$SKILL/venv"
    "$SKILL/venv/bin/pip" install -q -r "$SKILL/requirements.txt"
    ```
 
-3. **Write a config JSON** next to the screenshots (copy `config.example.json`).
-   Paths in `src` are relative to `src_dir`; outputs go to `output_dir`
-   (both resolved relative to the config file's location). One `screenshots`
-   entry per image, in the order they should appear in the store.
+5. **Write a config JSON** in a **temp / scratch directory** (copy
+   `config.example.json`) — do NOT drop it next to the user's screenshots; keep
+   their folders clean. Because the config no longer sits beside the shots, use
+   an **absolute** `src_dir` (the folder the user pointed at, or the parent of
+   the single file) and an **absolute** `output_dir`. For saving **beside the
+   sources** set `output_dir` to that same source folder (or omit it — it falls
+   back to `src_dir`) and keep the `mockup_` `out_prefix`; for a **subfolder**
+   set `output_dir` to `<source>/appstore`. For **poster** mode apply the chosen
+   caption to each shot's `caption` and the chosen background to `background`;
+   for **bare** mode set `"mode": "bare"` (top-level or per-shot) and drop the
+   caption/background/accent — the output is a tightly-cropped **transparent**
+   RGBA PNG. Paths in `src` are relative to `src_dir`. One `screenshots` entry
+   per image, in the order they should appear in the store.
 
-4. **Run it:**
+6. **Run it:**
 
    ```bash
    "$SKILL/venv/bin/python3" "$SKILL/compose.py" --config <path-to-config>.json
    ```
 
-5. **Review the output** by reading the generated PNGs and iterate on captions,
+7. **Review the output** by reading the generated PNGs and iterate on captions,
    frame color, or background as needed.
 
 ## Config fields
 
+- `mode` — `"poster"` (default) renders the framed phone on the styled
+  `background` with the `caption` + `accent` and `margins` (a store-listing
+  image). `"bare"` outputs just the device frame with the screenshot inside, on
+  a **transparent** background, tightly cropped to the device with no caption
+  and no side margins (a drop-in overlay PNG). In `"bare"` mode `background`,
+  `caption`, `accent`, `canvas`, and `margins` are ignored. Can be set
+  per-screenshot.
 - `frame` — `"auto"` (default) picks the bundled frame whose screen cutout
   aspect ratio best matches each screenshot; or a slug from `frames/` (see list
   below) / a path to force one frame for all. Can also be set per-screenshot.
 - `frame_color` — optional color-name bias for `"auto"` ties (e.g. `"black"`,
   `"natural"`, `"deep-blue"`), so same-aspect models resolve to your preferred
   finish.
-- `src_dir` / `output_dir` — relative to the config file.
+- `src_dir` — folder holding the raw screenshots, relative to the config file.
+- `output_dir` — where finished mockups are written, relative to the config
+  file. **Omit it to save into the same folder as the sources** (it falls back
+  to `src_dir`); set `"appstore"` to collect them in a subfolder instead.
+- `out_prefix` — string prepended to every output filename (default
+  `"mockup_"`). Keeps mockups distinguishable from raw shots when they share a
+  folder; set to `""` to disable. Already-prefixed `out` names aren't
+  double-prefixed.
 - `canvas` — final image `width`/`height`. Omit to use the frame's own screen
   size. For App Store use 1320×2868 (6.9") or 1290×2796.
 - `background` — `{"type":"gradient","top":[r,g,b],"bottom":[r,g,b]}` or
