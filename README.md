@@ -3,7 +3,7 @@
 Turn raw app screenshots into polished **App Store / Play Store** marketing
 images — dropped into a real device frame, with a bold caption, a brand-color
 accent underline, and a clean background. Ships as a **[Claude Code][claude-code]
-skill** and works standalone from the command line.
+skill** — you drive it entirely through the `/storeshots` command.
 
 - **Real device frames** — genuine iPhone frames (Dynamic Island + buttons),
   not a hand-drawn rectangle. Screen corners clip perfectly.
@@ -30,30 +30,18 @@ Raw screenshot → framed store shot:
 
 ## Install
 
-### As a Claude Code skill (recommended)
-
 ```bash
 git clone https://github.com/launchborn/storeshots.git ~/.claude/skills/storeshots
 ```
 
 **Restart Claude Code** afterwards so it registers the `/storeshots` command
-(skills are indexed at startup). See [Usage → With Claude Code](#with-claude-code).
-
-### Standalone
-
-```bash
-git clone https://github.com/launchborn/storeshots.git
-cd storeshots
-./setup.sh            # creates ./venv and installs Pillow + numpy
-```
+(skills are indexed at startup).
 
 ## Usage
 
-### With Claude Code
-
 Run the **`/storeshots`** command (or just ask in plain language, e.g. *"make
 App Store screenshots from these captures"* / *"сделай моки для стора"*). Claude
-reads `SKILL.md` and runs a short interview — no hand-written config needed:
+reads `SKILL.md` and runs a short interview — you never touch a config file:
 
 1. **Path** — give a folder of screenshots or a single screenshot file. It must
    be a real file on disk (a pasted-in-chat image isn't enough — drag the file
@@ -66,50 +54,15 @@ reads `SKILL.md` and runs a short interview — no hand-written config needed:
 5. **Where to save** — **beside the sources** (as `mockup_*.png`) or into an
    **`appstore/` subfolder**.
 
-Claude writes a throwaway config to a temp dir, runs `compose.py`, and shows you
-the result to iterate on. It never clutters your screenshot folder with configs.
+Claude writes a throwaway config to a temp dir, runs the composer, and shows you
+the result to iterate on — it never clutters your screenshot folder with configs.
 
-> First run on a machine: if you didn't clone into `~/.claude/skills/storeshots`,
-> or the command isn't recognized, **restart Claude Code** — skills (and their
-> slash commands) are indexed at startup.
+> If the command isn't recognized right after cloning, **restart Claude Code** —
+> skills (and their slash commands) are indexed at startup.
 
-### Standalone (CLI)
-
-1. Put your screenshots in a folder.
-2. Copy `config.example.json` somewhere and edit the `screenshots` list (set
-   `src_dir` to your screenshots folder).
-3. Run:
-
-```bash
-./venv/bin/python3 compose.py --config path/to/your-config.json
-```
-
-Outputs land in the config's `output_dir` — or, if you omit it, **right beside
-the sources** in `src_dir`, each name prefixed with `out_prefix` (default
-`mockup_`).
-
-### Minimal config
-
-```json
-{
-  "frame": "auto",
-  "frame_color": "black",
-  "src_dir": ".",
-  "output_dir": ".",
-  "out_prefix": "mockup_",
-  "canvas": { "width": 1320, "height": 2868 },
-  "background": { "type": "gradient", "top": [22, 25, 32], "bottom": [6, 7, 9] },
-  "accent": [58, 209, 122],
-  "caption": { "font_size": 82, "line_height": 104, "top": 180 },
-  "screenshots": [
-    { "src": "IMG_0001.png", "caption": "Real apartments\nacross the country", "out": "01.png" },
-    { "src": "IMG_0002.png", "caption": "Filter by what\nmatters to you",       "out": "02.png" }
-  ]
-}
-```
-
-See [`config.example.json`](config.example.json) for the full field list, and
-[`SKILL.md`](SKILL.md) for detailed docs and per-field notes.
+The config it generates under the hood is documented in
+[`config.example.json`](config.example.json) and [`SKILL.md`](SKILL.md); the
+fields are summarized below for reference.
 
 ## Config reference (short)
 
@@ -141,7 +94,7 @@ Frame assets are third-party — see [CREDITS.md](CREDITS.md).
 ## Requirements
 
 Python 3.9+, [Pillow](https://python-pillow.org/) and
-[numpy](https://numpy.org/) (installed by `setup.sh`).
+[numpy](https://numpy.org/) — the skill sets up its own `venv` on first run.
 
 ## License
 
