@@ -36,12 +36,8 @@ Raw screenshot → framed store shot:
 git clone https://github.com/launchborn/storeshots.git ~/.claude/skills/storeshots
 ```
 
-Then just ask Claude Code: *"make App Store screenshots from these captures"*
-(or run the `/storeshots` command) — it reads `SKILL.md` and drives the rest as
-a short interview: it asks for the **path** to your screenshot(s), proposes
-**three caption** options (or take your own), **three background** styles (or
-your own colors), and whether to save **beside the sources** (as `mockup_*.png`)
-or into an **`appstore/` subfolder**.
+**Restart Claude Code** afterwards so it registers the `/storeshots` command
+(skills are indexed at startup). See [Usage → With Claude Code](#with-claude-code).
 
 ### Standalone
 
@@ -53,8 +49,35 @@ cd storeshots
 
 ## Usage
 
+### With Claude Code
+
+Run the **`/storeshots`** command (or just ask in plain language, e.g. *"make
+App Store screenshots from these captures"* / *"сделай моки для стора"*). Claude
+reads `SKILL.md` and runs a short interview — no hand-written config needed:
+
+1. **Path** — give a folder of screenshots or a single screenshot file. It must
+   be a real file on disk (a pasted-in-chat image isn't enough — drag the file
+   in or paste its path).
+2. **Mode** — **Poster** (framed phone + caption on a styled background) or
+   **Bare frame** (device + screenshot only, transparent, tight-cropped).
+3. **Caption** *(poster)* — pick one of three benefit-focused suggestions or
+   type your own.
+4. **Background** *(poster)* — pick one of three styles or give your own colors.
+5. **Where to save** — **beside the sources** (as `mockup_*.png`) or into an
+   **`appstore/` subfolder**.
+
+Claude writes a throwaway config to a temp dir, runs `compose.py`, and shows you
+the result to iterate on. It never clutters your screenshot folder with configs.
+
+> First run on a machine: if you didn't clone into `~/.claude/skills/storeshots`,
+> or the command isn't recognized, **restart Claude Code** — skills (and their
+> slash commands) are indexed at startup.
+
+### Standalone (CLI)
+
 1. Put your screenshots in a folder.
-2. Copy `config.example.json` next to them and edit the `screenshots` list.
+2. Copy `config.example.json` somewhere and edit the `screenshots` list (set
+   `src_dir` to your screenshots folder).
 3. Run:
 
 ```bash
