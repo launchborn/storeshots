@@ -5,8 +5,8 @@ description: >
   screenshots into a real iPhone device frame with a caption, accent underline,
   and styled background. Use when the user wants to turn plain app screenshots
   into store-listing marketing images ("app store screenshots", "framed
-  screenshots", "device mockups", "store listing images", "рамка айфона",
-  "моки для аппстора"). Auto-picks the matching frame by aspect ratio; the
+  screenshots", "device mockups", "store listing images"). Auto-picks the
+  matching frame by aspect ratio; the
   screen cutout is auto-detected from the frame's alpha so no per-model
   coordinates are needed.
 ---
